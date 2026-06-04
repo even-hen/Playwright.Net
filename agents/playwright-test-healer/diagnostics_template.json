@@ -1,0 +1,8 @@
+{
+  "testName": "TC_E2E_017_CreateNewTask_ViaModal",
+  "failedLocator": "Page.Locator(\"[data-testid='add-task-btn']\")",
+  "exceptionMessage": "Timeout 10000ms exceeded while waiting for element to be visible",
+  "targetAction": "ClickAsync",
+  "pomFile": "src/PlaywrightFramework.UI/Pages/TasksPage.cs",
+  "domFragment": "<body><div id='app'><button class='btn-add-chore' id='btn-add'>+ Add Task</button></div></body>"
+}

@@ -1,0 +1,22 @@
+## Build outputs
+**/bin/
+**/obj/
+**/TestResults/
+**/reports/
+**/allure-results/
+**/playwright-report/
+
+## IDE and OS files
+.vs/
+.idea/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+## Private Secrets & Local Settings
+.env
+appsettings.local.json

@@ -1,0 +1,42 @@
+name: API Tests
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  run-api-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Setup .NET SDK
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+
+    - name: Restore dependencies
+      run: dotnet restore PlaywrightFramework.sln
+
+    - name: Build
+      run: dotnet build PlaywrightFramework.sln --no-restore --configuration Release
+
+    - name: Run API Tests
+      env:
+        TEST_ENVIRONMENT: CI
+        API_BASE_URL: ${{ secrets.API_BASE_URL || 'https://tjqznfdufdodbnjwapcv.supabase.co' }}
+        SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      run: dotnet test PlaywrightFramework.sln --filter "Category=api" --logger "console;verbosity=detailed" --configuration Release
+
+    - name: Upload Allure Results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: api-allure-results
+        path: tests/Api.Tests/bin/Release/net8.0/reports/allure-results/

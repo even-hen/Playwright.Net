@@ -1,0 +1,6 @@
+{
+  "BrowserName": "chromium",
+  "LaunchOptions": {
+    "Headless": false
+  }
+}

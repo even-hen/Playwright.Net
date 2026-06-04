@@ -1,0 +1,1818 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Nest - Proportional Family Task Coordinator API",
+    "description": "REST API documentation for Nest, a family productivity platform built on top of Supabase (PostgREST) and Supabase Auth. It supports capacity-aware task allocation, user timezone tracking, daily chore logs, and local/push notifications.",
+    "version": "1.0.0",
+    "contact": {
+      "name": "Nest Support Team",
+      "email": "support@even-hen.com"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://tjqznfdufdodbnjwapcv.supabase.co",
+      "description": "Supabase Sandbox/Production Environment"
+    }
+  ],
+  "security": [
+    {
+      "apiKeyHeader": [],
+      "bearerAuth": []
+    }
+  ],
+  "paths": {
+    "/auth/v1/signup": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Sign up a new user",
+        "description": "Creates a new user account with Supabase Auth. Upon completion, a corresponding profile record must be created in the `users` table.",
+        "security": [
+          {
+            "apiKeyHeader": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email",
+                  "password"
+                ],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "example": "parent@smiths.com"
+                  },
+                  "password": {
+                    "type": "string",
+                    "format": "password",
+                    "minLength": 6,
+                    "example": "supersecure123"
+                  },
+                  "data": {
+                    "type": "object",
+                    "description": "Optional user metadata to attach",
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "example": "John Smith"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "User created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid email, password too short, or user already exists"
+          }
+        }
+      }
+    },
+    "/auth/v1/token": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Authenticate user (Sign In)",
+        "description": "Logs in the user using email and password, returning a JWT token for subsequent database requests.",
+        "security": [
+          {
+            "apiKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "grant_type",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "password"
+              ]
+            },
+            "example": "password"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email",
+                  "password"
+                ],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "example": "parent@smiths.com"
+                  },
+                  "password": {
+                    "type": "string",
+                    "format": "password",
+                    "example": "supersecure123"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Authentication successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid credentials or grant type"
+          }
+        }
+      }
+    },
+    "/auth/v1/recover": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Request password recovery email",
+        "description": "Sends a password reset email to the specified user.",
+        "security": [
+          {
+            "apiKeyHeader": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email"
+                ],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "example": "parent@smiths.com"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Recovery email sent successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Recovery email sent"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "User email not found or malformed request"
+          }
+        }
+      }
+    },
+    "/auth/v1/logout": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Sign out the user",
+        "description": "Revokes the active user session token.",
+        "responses": {
+          "204": {
+            "description": "Successfully signed out"
+          },
+          "401": {
+            "description": "Unauthenticated or missing token"
+          }
+        }
+      }
+    },
+    "/auth/v1/user": {
+      "get": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Get authenticated user details",
+        "description": "Returns current Supabase Auth system user details (from JWT). Note that system metadata is returned; detailed profile attributes are fetched from the `/rest/v1/users` table endpoint.",
+        "responses": {
+          "200": {
+            "description": "Details retrieved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "email": {
+                      "type": "string",
+                      "format": "email"
+                    },
+                    "aud": {
+                      "type": "string",
+                      "example": "authenticated"
+                    },
+                    "role": {
+                      "type": "string",
+                      "example": "authenticated"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/rest/v1/users": {
+      "get": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Get user profiles",
+        "description": "Queries family member profiles. Filters can be applied to narrow search results (e.g. filter members by group).",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/select"
+          },
+          {
+            "name": "id",
+            "in": "query",
+            "description": "Filter by user ID, e.g. `eq.3d47e384-5f11-482a-a92c-0e24177b960b`",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "group_id",
+            "in": "query",
+            "description": "Filter by family group ID, e.g. `eq.7291a27e-cfc1-4b13-ba14-5b4d812328ba`",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "email",
+            "in": "query",
+            "description": "Filter by user email, e.g. `eq.child@smiths.com`",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of user profiles",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/User"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Create user profile",
+        "description": "Inserts a new profile. Typically triggered by client-side signup flow.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/prefer"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/User"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Profile created successfully"
+          },
+          "400": {
+            "description": "Bad Request - validation failed"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Update user profile",
+        "description": "Updates fields on the user profile, such as display name, timezone, theme, preferred notification hour, or capacity percentage. Adults can edit any member in their group; Teens/Children can only edit themselves.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "required": true,
+            "description": "Filter user to update, e.g. `eq.3d47e384-5f11-482a-a92c-0e24177b960b`",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/prefer"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "example": "Johnny Smith"
+                  },
+                  "resource": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 100,
+                    "description": "Capacity weight percentage",
+                    "example": 70
+                  },
+                  "group_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "nullable": true,
+                    "description": "Set to null when leaving a group",
+                    "example": null
+                  },
+                  "timezone": {
+                    "type": "string",
+                    "example": "Europe/London"
+                  },
+                  "notification_time": {
+                    "type": "string",
+                    "pattern": "^[0-2][0-9]:00$",
+                    "description": "24-hour hour string matching HH:00",
+                    "example": "08:00"
+                  },
+                  "language": {
+                    "type": "string",
+                    "enum": [
+                      "en",
+                      "ru"
+                    ],
+                    "example": "ru"
+                  },
+                  "theme": {
+                    "type": "string",
+                    "enum": [
+                      "light",
+                      "dark"
+                    ],
+                    "example": "dark"
+                  },
+                  "expo_push_token": {
+                    "type": "string",
+                    "nullable": true,
+                    "example": "ExponentPushToken[xxxxxxxxxxxxxxxxxxxxxx]"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "User updated successfully"
+          },
+          "400": {
+            "description": "Invalid parameter values"
+          },
+          "403": {
+            "description": "Forbidden - RLS policy validation failure"
+          }
+        }
+      }
+    },
+    "/rest/v1/groups": {
+      "get": {
+        "tags": [
+          "Groups"
+        ],
+        "summary": "Get group info",
+        "description": "Fetches details of the family group.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/select"
+          },
+          {
+            "name": "id",
+            "in": "query",
+            "description": "Filter group by ID, e.g. `eq.7291a27e-cfc1-4b13-ba14-5b4d812328ba`",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Group object array",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Group"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Groups"
+        ],
+        "summary": "Create new family group",
+        "description": "Initializes a family unit with default values. Creation auto-populates default chore lists via triggers/app setup logic.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/prefer"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "name",
+                  "created_by"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "Family household name",
+                    "example": "The Smiths"
+                  },
+                  "created_by": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "User ID of creator",
+                    "example": "3d47e384-5f11-482a-a92c-0e24177b960b"
+                  },
+                  "auto_distribution": {
+                    "type": "boolean",
+                    "default": true,
+                    "example": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Group created"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Groups"
+        ],
+        "summary": "Update group settings",
+        "description": "Updates group configuration, e.g., toggling auto-distribution logic (Adults only).",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "required": true,
+            "description": "Filter group to update, e.g. `eq.7291a27e-cfc1-4b13-ba14-5b4d812328ba`",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/prefer"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "example": "The Smith Residence"
+                  },
+                  "auto_distribution": {
+                    "type": "boolean",
+                    "description": "Toggle to distribute tasks automatically via weekly cron rotations",
+                    "example": false
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Group updated"
+          }
+        }
+      }
+    },
+    "/rest/v1/invite_links": {
+      "get": {
+        "tags": [
+          "Invite Links"
+        ],
+        "summary": "Query invitation codes",
+        "description": "Resolves invite links for validating code joining or displaying details to creators.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/select"
+          },
+          {
+            "name": "token",
+            "in": "query",
+            "description": "Filter by code token, e.g. `eq.ABCD1234`",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Invitation matching details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/InviteLink"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Invite Links"
+        ],
+        "summary": "Create group invite token",
+        "description": "Generates a temporary 8-character joining code valid for 24 hours.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/prefer"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "token",
+                  "group_id",
+                  "expires_at"
+                ],
+                "properties": {
+                  "token": {
+                    "type": "string",
+                    "description": "Unique 8-character uppercase code",
+                    "example": "ABCD1234"
+                  },
+                  "group_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "example": "7291a27e-cfc1-4b13-ba14-5b4d812328ba"
+                  },
+                  "expires_at": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "Expiration timestamp (24h offset)",
+                    "example": "2026-06-04T18:17:00Z"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Invite link token recorded"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Invite Links"
+        ],
+        "summary": "Update invite link usage",
+        "description": "Updates array of user IDs who have successfully signed up and redeemed this invite token.",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "query",
+            "required": true,
+            "description": "Token filter, e.g. `eq.ABCD1234`",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/prefer"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "used_by": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "description": "Updated log of UUIDs who used this code",
+                    "example": [
+                      "3d47e384-5f11-482a-a92c-0e24177b960b",
+                      "ba47e921-bc10-22cc-a00d-fa24177ee123"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Redeem count updated"
+          }
+        }
+      }
+    },
+    "/rest/v1/tasks": {
+      "get": {
+        "tags": [
+          "Tasks"
+        ],
+        "summary": "Query task catalog",
+        "description": "Queries group chores. Allows sorting/searching (e.g. active tasks at the top, sorted by cost and alphabetical order).",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/select"
+          },
+          {
+            "name": "group_id",
+            "in": "query",
+            "description": "Filter chores belonging to a specific group",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "is_active",
+            "in": "query",
+            "description": "Filter active tasks, e.g. `eq.true`",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "order",
+            "in": "query",
+            "description": "Default recommended ordering: `is_active.desc,complexity.desc`",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of chores",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Task"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Tasks"
+        ],
+        "summary": "Add a new chore (Adults only)",
+        "description": "Adds a new chore structure to the catalog. Chores can either be auto-distributed (greedy workload balance) or statically/manually pinned to a user.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/prefer"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "group_id",
+                  "title",
+                  "complexity",
+                  "week_days",
+                  "available_for",
+                  "created_by"
+                ],
+                "properties": {
+                  "group_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "title": {
+                    "type": "string",
+                    "minLength": 2,
+                    "example": "Vacuum Living Room"
+                  },
+                  "emoji": {
+                    "type": "string",
+                    "nullable": true,
+                    "example": "🧹"
+                  },
+                  "complexity": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 100,
+                    "example": 25
+                  },
+                  "week_days": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 6
+                    },
+                    "description": "Active weekdays. 0=Sun, 1=Mon, ..., 6=Sat",
+                    "example": [
+                      1,
+                      3,
+                      5
+                    ]
+                  },
+                  "available_for": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/UserType"
+                    },
+                    "description": "Age-appropriate constraints indicating eligible user types",
+                    "example": [
+                      "Adult",
+                      "Teen"
+                    ]
+                  },
+                  "assigned_to": {
+                    "type": "string",
+                    "format": "uuid",
+                    "nullable": true,
+                    "description": "Assigned user ID. Null if auto=true.",
+                    "example": null
+                  },
+                  "auto": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Set to true to use greedy auto-distribution, false for static manual assignment",
+                    "example": true
+                  },
+                  "is_active": {
+                    "type": "boolean",
+                    "default": true,
+                    "example": true
+                  },
+                  "created_by": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Chore successfully created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Task"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Tasks"
+        ],
+        "summary": "Edit chore details (Adults only)",
+        "description": "Updates details of a chore in the catalog.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "required": true,
+            "description": "Filter task by ID, e.g., `eq.5b4d8123-cfc1-4b13-ba14-7291a27ecfc1`",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/prefer"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "example": "Vacuum Lounge Room"
+                  },
+                  "emoji": {
+                    "type": "string",
+                    "nullable": true,
+                    "example": "🧹"
+                  },
+                  "complexity": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 100,
+                    "example": 30
+                  },
+                  "week_days": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer"
+                    },
+                    "example": [
+                      1,
+                      5
+                    ]
+                  },
+                  "available_for": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/UserType"
+                    },
+                    "example": [
+                      "Adult",
+                      "Teen",
+                      "Child"
+                    ]
+                  },
+                  "assigned_to": {
+                    "type": "string",
+                    "format": "uuid",
+                    "nullable": true,
+                    "example": "ba47e921-bc10-22cc-a00d-fa24177ee123"
+                  },
+                  "auto": {
+                    "type": "boolean",
+                    "example": false
+                  },
+                  "is_active": {
+                    "type": "boolean",
+                    "example": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Task updated successfully"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Tasks"
+        ],
+        "summary": "Delete task from catalog (Adults only)",
+        "description": "Deletes the chore definition and automatically cascades to delete all future/today pending assignments.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "required": true,
+            "description": "Filter task to delete, e.g. `eq.5b4d8123-cfc1-4b13-ba14-7291a27ecfc1`",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Task deleted successfully"
+          }
+        }
+      }
+    },
+    "/rest/v1/assignments": {
+      "get": {
+        "tags": [
+          "Assignments"
+        ],
+        "summary": "Get assignments list",
+        "description": "Retrieves user and family assignments. Query parameters enable filtering by week start (for stats) or by date (for 'To Do' lists).",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/select"
+          },
+          {
+            "name": "group_id",
+            "in": "query",
+            "description": "Filter assignments by group, e.g., `eq.7291a27e-cfc1-4b13-ba14-5b4d812328ba`",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "assigned_to",
+            "in": "query",
+            "description": "Filter assignments by member ID, e.g., `eq.3d47e384-5f11-482a-a92c-0e24177b960b`",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "week_start",
+            "in": "query",
+            "description": "Filter assignments starting on specific week (Monday ISO date), e.g. `eq.2026-06-01`",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "date",
+            "in": "query",
+            "description": "Filter by assignment date (ISO date), e.g. `eq.2026-06-03`",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of daily assignments",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Assignment"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Assignments"
+        ],
+        "summary": "Insert assignments",
+        "description": "Inserts manually created assignments or logs task events.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/prefer"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "task_id",
+                    "group_id",
+                    "title",
+                    "complexity",
+                    "week_days",
+                    "assigned_to",
+                    "status",
+                    "week_start",
+                    "date"
+                  ],
+                  "properties": {
+                    "task_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "group_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "title": {
+                      "type": "string",
+                      "example": "Vacuum Living Room"
+                    },
+                    "complexity": {
+                      "type": "integer"
+                    },
+                    "week_days": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      }
+                    },
+                    "assigned_to": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "status": {
+                      "$ref": "#/components/schemas/AssignmentStatus"
+                    },
+                    "week_start": {
+                      "type": "string",
+                      "example": "2026-06-01"
+                    },
+                    "date": {
+                      "type": "string",
+                      "example": "2026-06-03"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Assignments created"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Assignments"
+        ],
+        "summary": "Update assignment status (Mark Done/Skipped)",
+        "description": "Updates the status of an assignment. Adults can update any assignment; Teens/Children can only mark their own tasks as done.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "required": true,
+            "description": "Filter assignment to update, e.g. `eq.ba14-5b4d812328ba-7291a27e-cfc1-4b13`",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/prefer"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "$ref": "#/components/schemas/AssignmentStatus",
+                    "example": "done"
+                  },
+                  "done_at": {
+                    "type": "string",
+                    "format": "date-time",
+                    "nullable": true,
+                    "example": "2026-06-03T18:17:00Z"
+                  },
+                  "skipped_at": {
+                    "type": "string",
+                    "format": "date-time",
+                    "nullable": true,
+                    "example": null
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Assignment status updated successfully"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Assignments"
+        ],
+        "summary": "Delete assignments (Adults only)",
+        "description": "Removes scheduled assignments (usually applied when deleting tasks or re-shuffling chores).",
+        "parameters": [
+          {
+            "name": "group_id",
+            "in": "query",
+            "description": "Filter by group",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "task_id",
+            "in": "query",
+            "description": "Filter by task ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "description": "Filter by status, e.g., `eq.pending`",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "date",
+            "in": "query",
+            "description": "Filter by date, e.g. `gte.2026-06-03`",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Assignments deleted"
+          }
+        }
+      }
+    },
+    "/rest/v1/notifications": {
+      "get": {
+        "tags": [
+          "Notifications"
+        ],
+        "summary": "Get notification history",
+        "description": "Returns in-app notifications. Typically ordered descending by date and limited to the 20 most recent entries.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/select"
+          },
+          {
+            "name": "user_id",
+            "in": "query",
+            "description": "Filter notifications for specific user, e.g., `eq.3d47e384-5f11-482a-a92c-0e24177b960b`",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "order",
+            "in": "query",
+            "description": "Sorting order, e.g., `created_at.desc`",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Max limits (usually set to 20 for list rendering)",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Recent notifications list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Notification"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Notifications"
+        ],
+        "summary": "Update notification state (Mark read)",
+        "description": "Updates read status of user notifications.",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": true,
+            "description": "Update targets for the authenticated user, e.g., `eq.3d47e384-5f11-482a-a92c-0e24177b960b`",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "query",
+            "description": "Filter by notification ID, e.g., `eq.ba14-5b4d812328ba-7291a27e` (if marking single item read)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/prefer"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "is_read": {
+                    "type": "boolean",
+                    "description": "Set to true to mark notification(s) as read",
+                    "example": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Notifications marked as read"
+          }
+        }
+      }
+    },
+    "/rest/v1/rpc/generate_weekly_assignments": {
+      "post": {
+        "tags": [
+          "RPC Procedures"
+        ],
+        "summary": "Trigger Weekly Task Distribution",
+        "description": "Executes the server-side PL/pgSQL distribution engine. It loops through active groups, balances weekly active auto-assigned chores proportionally based on remaining capacity of eligible member roles, creates daily assignments, and emits notifications.",
+        "responses": {
+          "200": {
+            "description": "Function completed successfully"
+          }
+        }
+      }
+    },
+    "/rest/v1/rpc/sweep_past_assignments": {
+      "post": {
+        "tags": [
+          "RPC Procedures"
+        ],
+        "summary": "Sweep Past Assignments",
+        "description": "Marks past pending assignments (date < today in group creator's timezone) as skipped.",
+        "responses": {
+          "200": {
+            "description": "Assignments swept successfully"
+          }
+        }
+      }
+    },
+    "/rest/v1/rpc/send_push_notifications": {
+      "post": {
+        "tags": [
+          "RPC Procedures"
+        ],
+        "summary": "Dispatch Alerts & Push Notifications",
+        "description": "Processes push notifications for users whose preferred `notification_time` matches current local hour in their timezone. Compiles daily assignments, yesterday's skipped tasks, or weekly reports, inserts notification records, and dispatches push requests via Expo Push Notification service.",
+        "responses": {
+          "200": {
+            "description": "Notification dispatches triggered"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "parameters": {
+      "select": {
+        "name": "select",
+        "in": "query",
+        "description": "Select columns to return, e.g., `*` or `id,name,email`",
+        "required": false,
+        "schema": {
+          "type": "string"
+        },
+        "example": "*"
+      },
+      "prefer": {
+        "name": "Prefer",
+        "in": "header",
+        "description": "Preference header for PostgREST actions, e.g. `return=representation` to return updated rows.",
+        "required": false,
+        "schema": {
+          "type": "string"
+        },
+        "example": "return=representation"
+      }
+    },
+    "schemas": {
+      "UserType": {
+        "type": "string",
+        "enum": [
+          "Adult",
+          "Teen",
+          "Child"
+        ],
+        "description": "The category of family member determining access control and assignment eligibility."
+      },
+      "AssignmentStatus": {
+        "type": "string",
+        "enum": [
+          "pending",
+          "done",
+          "skipped"
+        ],
+        "description": "Current status of the daily chore assignment."
+      },
+      "User": {
+        "type": "object",
+        "required": [
+          "id",
+          "email",
+          "name",
+          "type",
+          "resource",
+          "timezone",
+          "notification_time",
+          "language"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Unique user ID (references Supabase auth.users.id)"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "description": "User email address"
+          },
+          "name": {
+            "type": "string",
+            "description": "Display name"
+          },
+          "type": {
+            "$ref": "#/components/schemas/UserType"
+          },
+          "resource": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100,
+            "default": 50,
+            "description": "Capacity weight percentage. Determines proportion of group workload allocated to the user."
+          },
+          "group_id": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "The ID of the group the user belongs to. Null if they are not in a group."
+          },
+          "timezone": {
+            "type": "string",
+            "description": "IANA timezone identifier used for scheduling",
+            "example": "America/New_York"
+          },
+          "notification_time": {
+            "type": "string",
+            "description": "Preferred hour of daily notifications in format HH:00",
+            "example": "09:00"
+          },
+          "language": {
+            "type": "string",
+            "enum": [
+              "en",
+              "ru"
+            ],
+            "default": "en",
+            "description": "Localization preference"
+          },
+          "theme": {
+            "type": "string",
+            "enum": [
+              "light",
+              "dark"
+            ],
+            "default": "light",
+            "description": "User interface visual style"
+          },
+          "expo_push_token": {
+            "type": "string",
+            "nullable": true,
+            "description": "Expo push notification token for mobile devices"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Group": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "created_by",
+          "auto_distribution",
+          "created_at"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "description": "Family group name"
+          },
+          "created_by": {
+            "type": "string",
+            "format": "uuid",
+            "description": "User ID of group creator (Adult administrator)"
+          },
+          "auto_distribution": {
+            "type": "boolean",
+            "description": "Toggle to shuffle chores weekly using greedy task-allocation engine"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "InviteLink": {
+        "type": "object",
+        "required": [
+          "token",
+          "group_id",
+          "created_at",
+          "expires_at"
+        ],
+        "properties": {
+          "token": {
+            "type": "string",
+            "description": "8-character uppercase unique code"
+          },
+          "group_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Family group associated with the invite link"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Code expires after 24 hours"
+          },
+          "used_by": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "User IDs who registered or joined using this token"
+          }
+        }
+      },
+      "Task": {
+        "type": "object",
+        "required": [
+          "id",
+          "group_id",
+          "title",
+          "complexity",
+          "week_days",
+          "available_for",
+          "auto",
+          "is_active",
+          "created_by",
+          "created_at"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "group_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string",
+            "description": "Description of the chore"
+          },
+          "emoji": {
+            "type": "string",
+            "nullable": true,
+            "description": "Representative emoji icon for the task"
+          },
+          "complexity": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Task cost or weight multiplier"
+          },
+          "week_days": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 6
+            },
+            "description": "Active days. Array of integers (0=Sunday, 1=Monday ... 6=Saturday)"
+          },
+          "available_for": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UserType"
+            },
+            "description": "Allowed member types for this chore"
+          },
+          "assigned_to": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Specific user ID assigned to task. Null if auto=true and unassigned."
+          },
+          "auto": {
+            "type": "boolean",
+            "description": "True if auto distribution is active. False if statically assigned."
+          },
+          "is_active": {
+            "type": "boolean",
+            "description": "Only active tasks are generated and auto-distributed."
+          },
+          "created_by": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Assignment": {
+        "type": "object",
+        "required": [
+          "id",
+          "task_id",
+          "group_id",
+          "title",
+          "complexity",
+          "week_days",
+          "assigned_to",
+          "status",
+          "week_start",
+          "date"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "task_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Reference to master chore task"
+          },
+          "group_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string",
+            "description": "Snapshotted task title at generation"
+          },
+          "complexity": {
+            "type": "integer",
+            "description": "Snapshotted complexity weight at generation"
+          },
+          "week_days": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            },
+            "description": "Snapshotted active week days"
+          },
+          "assigned_to": {
+            "type": "string",
+            "format": "uuid",
+            "description": "User ID of the family member who must perform the task"
+          },
+          "status": {
+            "$ref": "#/components/schemas/AssignmentStatus"
+          },
+          "week_start": {
+            "type": "string",
+            "description": "ISO date string of week's Monday (used for weekly aggregation)",
+            "example": "2026-06-01"
+          },
+          "date": {
+            "type": "string",
+            "description": "ISO date of the specific day this instance is active",
+            "example": "2026-06-03"
+          },
+          "done_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Timestamp of task completion"
+          },
+          "skipped_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Timestamp when task expired/marked skipped"
+          }
+        }
+      },
+      "Notification": {
+        "type": "object",
+        "required": [
+          "id",
+          "user_id",
+          "group_id",
+          "title",
+          "body",
+          "type",
+          "is_read",
+          "created_at"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "user_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "group_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "daily_summary",
+              "missed_task",
+              "weekly_report"
+            ]
+          },
+          "is_read": {
+            "type": "boolean",
+            "default": false
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "AuthResponse": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string",
+            "description": "JWT access token used in Authentication bearer headers"
+          },
+          "token_type": {
+            "type": "string",
+            "example": "bearer"
+          },
+          "expires_in": {
+            "type": "integer",
+            "description": "Session duration in seconds",
+            "example": 3600
+          },
+          "refresh_token": {
+            "type": "string",
+            "description": "Token used to request a new access token"
+          },
+          "user": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "email": {
+                "type": "string",
+                "format": "email"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,55 @@
+name: E2E UI Tests
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  run-e2e-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Setup .NET SDK
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+
+    - name: Restore dependencies
+      run: dotnet restore PlaywrightFramework.sln
+
+    - name: Build
+      run: dotnet build PlaywrightFramework.sln --no-restore --configuration Release
+
+    - name: Install Playwright Browsers
+      run: pwsh tests/E2E.Tests/bin/Release/net8.0/playwright.ps1 install --with-deps
+
+    - name: Run E2E Tests
+      env:
+        TEST_ENVIRONMENT: CI
+        BASE_URL: ${{ secrets.BASE_URL || 'https://even-hen.github.io/nest-family-app' }}
+        API_BASE_URL: ${{ secrets.API_BASE_URL || 'https://tjqznfdufdodbnjwapcv.supabase.co' }}
+        SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      run: dotnet test PlaywrightFramework.sln --filter "Category=e2e" --logger "console;verbosity=detailed" --configuration Release
+
+    - name: Upload Traces & Screenshots
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: e2e-failure-artifacts
+        path: |
+          tests/E2E.Tests/bin/Release/net8.0/reports/traces/
+          tests/E2E.Tests/bin/Release/net8.0/reports/screenshots/
+
+    - name: Upload Allure Results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: e2e-allure-results
+        path: tests/E2E.Tests/bin/Release/net8.0/reports/allure-results/
