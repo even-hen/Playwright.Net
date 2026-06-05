@@ -117,12 +117,10 @@ public class NotificationsTabTests : UiBaseTest
 
         // Verify initially we have items
         await Expect(CurrentPage.GetByText("Task Reminder")).ToBeVisibleAsync();
+        await Expect(notificationsPage.UnreadCountHeader).ToBeVisibleAsync();
 
         // Click mark all read
         await notificationsPage.ClickMarkAllReadAsync();
-
-        // Allow some time for state transition
-        await CurrentPage.WaitForTimeoutAsync(1000);
 
         // After marking all read, there should be no unread count, or the unread header is hidden/empty
         await Expect(notificationsPage.UnreadCountHeader).Not.ToBeVisibleAsync(new() { Timeout = 5000 });

@@ -103,12 +103,8 @@ public class GroupSetupTests : UiBaseTest
         // The app currently stays on the Join Group page without a redirect — verify that.
         await CurrentPage.WaitForTimeoutAsync(2000); // allow any async response
 
-        // Check: user is still on the join page (invite code input still visible = not redirected)
-        await Expect(CurrentPage.Locator("[data-testid='error-message']")
-            .Or(CurrentPage.GetByText("Invalid invite code", new() { Exact = false }))
-            .Or(CurrentPage.GetByText("invalid", new() { Exact = false }))
-            .Or(CurrentPage.GetByText("not found", new() { Exact = false }))
-            .Or(CurrentPage.GetByPlaceholder("Paste your invite code")))
+        // Check: user gets the exact invalid invite code error message
+        await Expect(CurrentPage.GetByText("Invalid invite code"))
             .ToBeVisibleAsync(new() { Timeout = 10000 });
 
     }
